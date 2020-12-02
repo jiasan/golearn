@@ -1,57 +1,55 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+	"sync"
+)
 
-type filer interface {
-	Read() string
+func proc(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println("proc")
+			return
+		default:
+		}
+	}
 }
 
-type File struct {
-	Name string
+func channel() {
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+
+	go proc(ctx)
+	go proc(ctx)
+	go proc(ctx)
+
+	cancel()
 }
 
-func (f *File) Read() string {
-	return f.Name
-}
+func wait() {
+	wg := sync.WaitGroup{}
+	wg.Add(3)
 
-func Get(file interface{}) string {
-	f := file.(filer)
-	return f.Read()
-}
+	go func() {
+		fmt.Println(1)
+		wg.Done()
+	}()
+	go func() {
+		fmt.Println(2)
+		wg.Done()
+	}()
+	go func() {
+		fmt.Println(3)
+		wg.Done()
+	}()
 
-type Service interface {
-	Start()     // 开启服务
-	Log(string) // 日志输出
-}
-
-// 日志器
-type Logger struct {
-}
-
-// 实现Service的Log()方法
-func (g *Logger) Log(l string) {
-	fmt.Println(l)
-}
-
-// 游戏服务
-type GameService struct {
-	Logger // 嵌入日志器
-}
-
-// 实现Service的Start()方法
-func (g *GameService) Start() {
-	fmt.Println("GameService.start")
+	wg.Wait()
 }
 
 func main() {
-	var s Service = new(GameService)
-	s.Start()
-	s.Log("hello")
+	channel()
+	wait()
 
-	f := &File{Name: "hello"}
-	var w filer
-	w = filer(f)
-	fmt.Println(w.Read())
-
-	fmt.Println(Get(f))
 }
